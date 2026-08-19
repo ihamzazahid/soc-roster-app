@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Annual Shift Tracker — {{ year }}</h2>
+    <div class="btn-group">
+      <a href="{{ url_for('main.shift_tracker', year=year-1) }}" class="btn btn-outline-primary">&laquo; {{ year - 1 }}</a>
+      <a href="{{ url_for('main.shift_tracker', year=year+1) }}" class="btn btn-outline-primary">{{ year + 1 }} &raquo;</a>
+    </div>
+  </div>
+
+  <div class="row row-cols-1 row-cols-md-3 g-4">
+    {% for m in months_summary %}
+    <div class="col">
+      <div class="card h-100 border-{% if m.is_generated %}success{% else %}secondary{% endif %}">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">{{ m.month_name }}</h5>
+          {% if m.is_generated %}
+            <span class="badge bg-success">Generated</span>
+          {% else %}
+            <span class="badge bg-secondary">Pending</span>
+          {% endif %}
+        </div>
+        <div class="card-body">
+          <p class="card-text">Total Shift Entries: <strong>{{ m.total_entries }}</strong></p>
+        </div>
+        <div class="card-footer d-flex gap-2">
+          <a href="{{ url_for('main.view_roster', year=year, month=m.month_num) }}" class="btn btn-sm btn-outline-primary w-100">
+            View
+          </a>
+          {% if current_user.role.name in ['Admin', 'SOC_Manager'] %}
+          <form action="{{ url_for('main.generate_roster') }}" method="POST" class="w-100">
+            <input type="hidden" name="year" value="{{ year }}">
+            <input type="hidden" name="month" value="{{ m.month_num }}">
+            <button type="submit" class="btn btn-sm btn-primary w-100">
+              {% if m.is_generated %}Regenerate{% else %}Generate{% endif %}
+            </button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Leave Tracker - SOC System{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="row">
+        <!-- Leave Balances Table -->
+        <div class="col-md-7 mb-4">
+            <h4>Analyst Leave Allocations & Usage</h4>
+            <table class="table table-bordered bg-white shadow-sm align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Analyst</th>
+                        <th>Joining Date</th>
+                        <th>Annual (Used/Allocated)</th>
+                        <th>Sick (Month/Total)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td><strong>{{ user.name }}</strong> ({{ user.tier }})</td>
+                        <td>{{ user.joining_date }}</td>
+                        <td>
+                            <span class="badge bg-info text-dark p-2">{{ user.annual_leave_used }} / {{ user.annual_leave_allocated }} Days</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-warning text-dark p-2">This Month: {{ user.sick_leave_monthly_used }}</span>
+                            <span class="badge bg-secondary p-2">Total: {{ user.sick_leave_total_used }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Request Leave Form -->
+        <div class="col-md-5">
+            <h4>Submit Leave Request</h4>
+            <form action="{{ url_for('main.submit_leave') }}" method="POST" class="card card-body shadow-sm">
+                <div class="mb-3">
+                    <label class="form-label">Analyst</label>
+                    <select name="user_id" class="form-select" required>
+                        {% for user in users %}
+                        <option value="{{ user.id }}">{{ user.name }} ({{ user.tier }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Leave Type</label>
+                    <select name="leave_type" class="form-select" required>
+                        <option value="Annual">Annual Leave</option>
+                        <option value="Sick">Sick Leave</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" name="start_date" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">End Date</label>
+                    <input type="date" name="end_date" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit & Update Roster</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

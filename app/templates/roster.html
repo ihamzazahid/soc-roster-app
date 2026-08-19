@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>SOC Roster — {{ month_name }} {{ selected_year }}</h2>
+
+    <div class="d-flex gap-2">
+      <!-- Month & Year Selector + Generate Button -->
+      {% if current_user.role.name in ['Admin', 'SOC_Manager'] %}
+      <form action="{{ url_for('main.generate_roster') }}" method="POST" class="d-flex gap-2">
+        <select name="month" class="form-select">
+          {% for m in range(1, 13) %}
+            <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>
+              {{ m }} - {{ ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m-1] }}
+            </option>
+          {% endfor %}
+        </select>
+        
+        <select name="year" class="form-select">
+          {% for y in range(2025, 2028) %}
+            <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+
+        <button type="submit" class="btn btn-primary text-nowrap">
+          <i class="bi bi-gear-wide-connected"></i> Generate Roster
+        </button>
+      </form>
+      {% endif %}
+
+      <a href="{{ url_for('main.export_excel', year=selected_year, month=selected_month) }}" class="btn btn-outline-success">
+        <i class="bi bi-file-earmark-excel"></i> Export
+      </a>
+
+      <a href="{{ url_for('main.shift_tracker', year=selected_year) }}" class="btn btn-outline-secondary">
+        Shift Tracker
+      </a>
+    </div>
+  </div>
+
+  <!-- Roster Grid Table -->
+  <div class="table-responsive">
+    <table class="table table-bordered table-sm text-center align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th style="min-width: 150px;">Analyst / Role</th>
+          {% for day in days_in_month %}
+            <th style="min-width: 40px;">
+              <small>{{ day.strftime('%a') }}</small><br>
+              {{ day.strftime('%d') }}
+            </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td class="fw-bold text-start ps-2">
+            {{ u.name }}
+            <br>
+            <small class="text-muted fw-normal">{{ u.tier or u.role.name }}</small>
+          </td>
+          {% for day in days_in_month %}
+            {% set date_key = day.strftime('%Y-%m-%d') %}
+            {% set entry = roster_dict.get((u.id, date_key)) %}
+            
+            <td>
+              {% if entry %}
+                {% if entry.shift_type == 'OFF' %}
+                  <span class="badge bg-secondary">OFF</span>
+                {% elif entry.shift_type in ['Annual Leave', 'Sick Leave', 'Leave'] %}
+                  <span class="badge bg-warning text-dark">LEAVE</span>
+                {% elif entry.shift_type == 'Morning' %}
+                  <span class="badge bg-info text-dark" title="Morning (08:00 - 16:00)">M</span>
+                {% elif entry.shift_type == 'Evening' %}
+                  <span class="badge bg-primary" title="Evening (16:00 - 00:00)">E</span>
+                {% elif entry.shift_type == 'Night' %}
+                  <span class="badge bg-dark" title="Night (00:00 - 08:00)">N</span>
+                {% elif entry.shift_type == 'General' %}
+                  <span class="badge bg-success" title="General Shift">GEN</span>
+                {% else %}
+                  <span class="badge bg-light text-dark">{{ entry.shift_type }}</span>
+                {% endif %}
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

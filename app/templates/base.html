@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SOC Shift Roster Management System{% endblock %}</title>
+    <!-- Bootstrap 5 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <!-- App Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="bg-light d-flex flex-column min-vh-100">
+
+    <!-- Global Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3 shadow-sm border-bottom border-secondary">
+        <a class="navbar-brand fw-bold" href="{{ url_for('main.dashboard') }}">🛡️ SOC Roster System</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="navbarNav">
+            {% if current_user.is_authenticated %}
+            <!-- Navigation Links for Authenticated Users -->
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}" href="{{ url_for('main.dashboard') }}">Dashboard</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'main.view_roster' %}active{% endif %}" href="{{ url_for('main.view_roster') }}">Master Roster</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'main.view_leaves' %}active{% endif %}" href="{{ url_for('main.view_leaves') }}">Leave Tracker</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'main.view_oncall' %}active{% endif %}" href="{{ url_for('main.view_oncall') }}">On-Call Teams</a>
+                </li>
+            </ul>
+            
+            <!-- User Status & Logout -->
+            <div class="d-flex align-items-center text-white gap-3 ms-auto">
+                <div class="text-end lh-sm">
+                    <span class="d-block fw-semibold">{{ current_user.name }}</span>
+                    <span class="badge bg-info text-dark" style="font-size: 0.7rem;">
+                        {{ current_user.tier if current_user.tier else current_user.role.name }}
+                    </span>
+                </div>
+                <a href="{{ url_for('main.logout') }}" class="btn btn-outline-danger btn-sm fw-bold">
+                    🚪 Logout
+                </a>
+            </div>
+            {% else %}
+            <!-- Guest / Unauthenticated State -->
+            <div class="ms-auto">
+                <a href="{{ url_for('main.login') }}" class="btn btn-primary btn-sm fw-bold">Login</a>
+            </div>
+            {% endif %}
+        </div>
+    </nav>
+
+    <!-- Flash Message Container -->
+    <div class="container my-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Page Content Block -->
+    <main class="flex-grow-1">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white-50 text-center py-3 mt-auto border-top border-secondary">
+        <small>SOC Roster Management System &copy; 2026 | Operations & Escalation Platform</small>
+    </footer>
+
+    <!-- Bootstrap 5 Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- App Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/roster.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

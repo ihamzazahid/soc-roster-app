@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}24/7 Operations Dashboard - SOC{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+
+    <!-- Header & Escalation Banner -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-0">24/7 Shift Operations Dashboard</h2>
+            <p class="text-muted mb-0">Real-time duty status for {{ today.strftime('%A, %B %d, %Y') }}</p>
+        </div>
+        {% if soc_manager %}
+        <div class="alert alert-info py-2 px-3 mb-0 shadow-sm">
+            <strong>Escalation Manager:</strong> {{ soc_manager.name }} | 📞 {{ soc_manager.phone if soc_manager.phone else 'On Call' }}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 24/7 Active Shift Grid -->
+    <div class="row mb-4">
+        {% set shifts_config = [
+            ('Morning', '07:00 - 15:00', 'warning', '☀️ Morning Shift'),
+            ('Evening', '15:00 - 23:00', 'info', '🌆 Evening Shift'),
+            ('Night', '23:00 - 07:00', 'dark', '🌙 Night Shift')
+        ] %}
+
+        {% for shift_name, shift_hours, badge_color, display_label in shifts_config %}
+        <div class="col-lg-4 mb-3">
+            <div class="card h-100 border-start border-4 border-{{ badge_color }} shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                    <h5 class="fw-bold mb-0 text-dark">{{ display_label }}</h5>
+                    <span class="badge bg-{{ badge_color }} {{ 'text-dark' if badge_color in ['warning', 'info'] else '' }}">
+                        {{ shift_hours }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    {% set assigned_analysts = active_shifts.get(shift_name, []) %}
+                    {% if assigned_analysts %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-borderless align-middle mb-0">
+                                <thead>
+                                    <tr class="border-bottom text-muted small">
+                                        <th>Analyst</th>
+                                        <th>Role / Tier</th>
+                                        <th class="text-end">Contact</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for user in assigned_analysts %}
+                                    <tr>
+                                        <td><strong>{{ user.name }}</strong></td>
+                                        <td>
+                                            {% if 'L2' in user.tier or 'L3' in user.tier or 'Lead' in user.tier %}
+                                                <span class="badge bg-primary">{{ user.tier }}</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">{{ user.tier or 'L1' }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            <a href="mailto:{{ user.email }}" class="btn btn-sm btn-outline-secondary py-0 px-2">✉️</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-danger py-2 mb-0 text-center small">
+                            ⚠️ <strong>Coverage Warning:</strong> No active analysts assigned to this block.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="row">
+        <!-- Daily Roster Summary Table -->
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">All Scheduled Roster Entries (Today)</h5>
+                    <a href="{{ url_for('main.view_roster') }}" class="btn btn-sm btn-light">Full Monthly Roster</a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Analyst Name</th>
+                                    <th>Tier Level</th>
+                                    <th>Assigned Shift</th>
+                                    <th>Email</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set total_scheduled = namespace(count=0) %}
+                                {% for shift_type, analysts in active_shifts.items() %}
+                                    {% for user in analysts %}
+                                        {% set total_scheduled.count = total_scheduled.count + 1 %}
+                                        <tr>
+                                            <td><strong>{{ user.name }}</strong></td>
+                                            <td><span class="badge bg-outline-dark border text-dark">{{ user.tier or 'L1' }}</span></td>
+                                            <td>
+                                                {% if shift_type == 'Morning' %}
+                                                    <span class="badge bg-warning text-dark">Morning (07:00-15:00)</span>
+                                                {% elif shift_type == 'Evening' %}
+                                                    <span class="badge bg-info text-dark">Evening (15:00-23:00)</span>
+                                                {% elif shift_type == 'Night' %}
+                                                    <span class="badge bg-dark">Night (23:00-07:00)</span>
+                                                {% elif shift_type == 'OFF' %}
+                                                    <span class="badge bg-light text-muted border">Scheduled OFF</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">Leave</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="small text-muted">{{ user.email }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                {% endfor %}
+
+                                {% if total_scheduled.count == 0 %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">
+                                        No shift data found for today.
+                                        <form action="{{ url_for('main.generate_roster') }}" method="POST" class="d-inline ms-2">
+                                            <input type="hidden" name="year" value="{{ today.year }}">
+                                            <input type="hidden" name="month" value="{{ today.month }}">
+                                            <button type="submit" class="btn btn-sm btn-primary">Generate Roster Now</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- External On-Call Operations Card -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Active On-Call Contacts</h5>
+                    <a href="{{ url_for('main.view_oncall') }}" class="btn btn-sm btn-outline-light">Manage</a>
+                </div>
+                <div class="card-body">
+                    {% if oncall_contacts %}
+                        <div class="list-group list-group-flush">
+                            {% for contact in oncall_contacts %}
+                            <div class="list-group-item px-0">
+                                <div class="d-flex w-100 justify-content-between align-items-center">
+                                    <h6 class="mb-1 text-primary fw-bold">{{ contact.team_name }}</h6>
+                                    <span class="badge bg-success">Active</span>
+                                </div>
+                                <p class="mb-1 fw-bold small">{{ contact.name }} <span class="text-muted">({{ contact.title }})</span></p>
+                                <div class="small text-muted">
+                                    <div>📞 <a href="tel:{{ contact.phone }}">{{ contact.phone }}</a></div>
+                                    <div>✉️ <a href="mailto:{{ contact.email }}">{{ contact.email }}</a></div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <p class="mb-0">No external contacts registered for today.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
