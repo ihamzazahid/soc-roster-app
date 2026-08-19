@@ -1,69 +1,247 @@
-# 🛡️ SOC 24/7 Shift Roster & Operations Platform (`soc-roster-app`)
+# 🛡️ SOC 24/7 Shift Roster & Operations Platform
 
-An enterprise-grade, containerized Flask application designed for Security Operations Centers (SOCs) to automate **24/7 shift scheduling**, manage analyst hierarchies, track leave requests, maintain external on-call directories, and provide real-time operational visibility through an interactive dashboard.
+<div align="center">
+
+![Python](https://img.shields.io/badge/Python-3.11+-blue)
+![Flask](https://img.shields.io/badge/Flask-3.x-black)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-blue)
+![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED)
+![License](https://img.shields.io/badge/License-MIT-green)
+
+**Enterprise Workforce Scheduling & Operations Management Platform for Security Operations Centers (SOC)**
+
+Automated Shift Scheduling • Leave Management • Analyst Hierarchy • Escalation Management • Real-Time Operations Dashboard
+
+</div>
 
 ---
 
-## 🚀 Features
+# 📋 Overview
 
-### 🔄 Intelligent 24/7 Shift Scheduling
+SOC Roster System is an enterprise-grade Flask application built to manage continuous 24/7 Security Operations Center staffing and workforce planning.
 
-* Automated generation of continuous SOC coverage
-* Three 8-hour shift rotations:
+The platform automates shift scheduling, analyst assignments, leave management, escalation contact tracking, and operational visibility while enforcing staffing rules and analyst fatigue protections.
 
-  * **Morning:** 07:00 – 15:00
-  * **Evening:** 15:00 – 23:00
-  * **Night:** 23:00 – 07:00
-* Ensures zero coverage gaps across all days of the year
+Designed for modern SOC teams, MSSPs, MDR providers, NOCs, and enterprise cybersecurity operations.
 
-### 🛡️ Analyst Tier Enforcement
+---
 
-* Supports analyst hierarchy:
+# ✨ Key Features
 
-  * L1 Analyst
-  * L2 Analyst
-  * L3 Analyst
-  * SOC Lead
-* Enforces mandatory senior analyst oversight during operational shifts
+### 🔄 Automated 24/7 Shift Scheduling
 
-### 😴 Fatigue & Compliance Controls
+Generate continuous shift coverage with:
 
-* Prevents invalid back-to-back assignments
-* Avoids Morning shifts immediately following Night shifts
-* Promotes fair workload distribution
+| Shift      | Schedule      |
+| ---------- | ------------- |
+| 🌅 Morning | 07:00 – 15:00 |
+| 🌆 Evening | 15:00 – 23:00 |
+| 🌙 Night   | 23:00 – 07:00 |
+
+Capabilities:
+
+* Monthly roster generation
+* Continuous SOC coverage
+* Automated analyst allocation
+* Leave-aware scheduling
+* Balanced workload distribution
+
+---
+
+### 🛡️ Analyst Hierarchy Enforcement
+
+Support for multi-tier analyst structures:
+
+* L1 Analyst
+* L2 Analyst
+* L3 Analyst
+* SOC Manager
+* SOC Lead
+
+Scheduling policies ensure appropriate senior analyst coverage across operations.
+
+---
+
+### 😴 Fatigue Management Controls
+
+Built-in protections to improve workforce sustainability:
+
+* Prevents Night → Morning scheduling conflicts
+* Avoids duplicate shift assignments
+* Reduces analyst fatigue
+* Supports fair rotation practices
+
+---
 
 ### 🏖️ Leave Management
 
-* Submit, approve, and track leave requests
-* Automatically excludes unavailable analysts from schedules
-* Dynamically recalculates rosters after leave approval
+Comprehensive leave workflow including:
 
-### 📞 External On-Call Directory
-
-* Manage third-party escalation contacts
-* Define active duty windows and escalation paths
-* Quick access during incidents
-
-### 📊 Real-Time SOC Dashboard
-
-* View currently active analysts by shift
-* Track roster metrics and staffing coverage
-* Monitor escalation contacts and operational readiness
+* Leave request submission
+* Approval management
+* Availability tracking
+* Automatic roster recalculation
+* Conflict prevention
 
 ---
 
-## 📂 Project Structure
+### 📞 External On-Call Management
+
+Maintain escalation contacts for:
+
+* Infrastructure Teams
+* Cloud Operations
+* Network Operations
+* DevSecOps Teams
+* Vendor Support Teams
+
+---
+
+### 📊 Real-Time Operations Dashboard
+
+Monitor:
+
+* Active analysts
+* Current shift coverage
+* Daily roster assignments
+* Escalation contacts
+* Operational staffing status
+
+---
+
+# 📸 Application Screenshots
+
+## 🔐 Authentication Portal
+
+Secure login interface for SOC administrators and analysts.
+
+![SOC Login](docs/images/login.png)
+
+---
+
+## 📊 Operations Dashboard
+
+Real-time visibility into active SOC operations and staffing coverage.
+
+### Highlights
+
+* Active Morning, Evening, and Night shifts
+* Current analyst assignments
+* On-call escalation contacts
+* Daily roster visibility
+* Operational status overview
+
+![Operations Dashboard](docs/images/dashboard.png)
+
+---
+
+## 📅 Master Roster Management
+
+Monthly scheduling interface designed for workforce planning and shift allocation.
+
+### Highlights
+
+* Monthly roster generation
+* Shift allocation management
+* Leave-aware scheduling
+* Analyst tier visibility
+* Export functionality
+
+![Master Roster](docs/images/master-roster.png)
+
+---
+
+## 🏖️ Leave Tracker
+
+Centralized leave management system for analyst availability planning.
+
+### Highlights
+
+* Leave request management
+* Approval workflows
+* Analyst availability tracking
+* Schedule conflict prevention
+* Automated roster adjustments
+
+![Leave Tracker](docs/images/leave-tracker.png)
+
+---
+
+## 📞 On-Call Teams Directory
+
+Manage escalation contacts and external support teams.
+
+### Highlights
+
+* Escalation management
+* Contact directory
+* Active support windows
+* Team ownership visibility
+* Incident support readiness
+
+![On-Call Teams](docs/images/oncall-teams.png)
+
+---
+
+## 🚨 Shift Tracker
+
+Monitor active shifts and workforce utilization in real time.
+
+### Highlights
+
+* Active shift monitoring
+* Coverage verification
+* Analyst assignment tracking
+* Operational visibility
+* Workforce monitoring
+
+![Shift Tracker](docs/images/shift-tracker.png)
+
+---
+
+# 🏗️ System Architecture
+
+```text
+Users
+  │
+  ▼
+Flask Application
+  │
+  ├── Authentication
+  ├── Dashboard Module
+  ├── Roster Engine
+  ├── Leave Management
+  ├── Shift Tracker
+  ├── On-Call Directory
+  │
+  ▼
+PostgreSQL Database
+  │
+  ├── Users
+  ├── Roles
+  ├── Roster Entries
+  ├── Leave Requests
+  └── External Contacts
+```
+
+---
+
+# 📂 Repository Structure
 
 ```text
 soc-roster-app/
+│
 ├── app/
+│   │
 │   ├── services/
 │   │   └── roster_generator.py
+│   │
 │   ├── static/
 │   │   ├── css/
 │   │   │   └── style.css
 │   │   └── js/
 │   │       └── roster.js
+│   │
 │   ├── templates/
 │   │   ├── base.html
 │   │   ├── dashboard.html
@@ -73,44 +251,50 @@ soc-roster-app/
 │   │   ├── roster.html
 │   │   ├── shift_tracker.html
 │   │   └── users.html
+│   │
 │   ├── models.py
 │   ├── routes.py
 │   ├── scheduler.py
 │   ├── utils.py
 │   └── __init__.py
+│
+├── docs/
+│   │
+│   ├── images/
+│   │   ├── login.png
+│   │   ├── dashboard.png
+│   │   ├── master-roster.png
+│   │   ├── leave-tracker.png
+│   │   ├── oncall-teams.png
+│   │   └── shift-tracker.png
+│   │
+│   └── architecture/
+│       └── system-architecture.png
+│
 ├── config.py
 ├── docker-compose.yml
 ├── Dockerfile
-├── README.md
 ├── requirements.txt
+├── seed.py
 ├── run.py
-└── seed.py
+├── .env.example
+├── LICENSE
+└── README.md
 ```
 
 ---
 
-## 🏗️ Technology Stack
+# ⚙️ Environment Configuration
 
-* **Backend:** Flask
-* **Database:** PostgreSQL
-* **ORM:** SQLAlchemy
-* **Frontend:** HTML, CSS, JavaScript, Jinja2
-* **Authentication:** Flask Login
-* **Containerization:** Docker & Docker Compose
-
----
-
-## ⚙️ Environment Configuration
-
-Create a `.env` file in the project root:
+Create a `.env` file in the project root.
 
 ```env
-# Flask Configuration
+# Flask
 FLASK_APP=run.py
 FLASK_ENV=production
-SECRET_KEY=your_super_secret_key_here
+SECRET_KEY=your_super_secret_key
 
-# PostgreSQL Configuration
+# PostgreSQL
 POSTGRES_USER=soc_user
 POSTGRES_PASSWORD=soc_pass
 POSTGRES_DB=soc_roster_db
@@ -120,35 +304,28 @@ DATABASE_URL=postgresql://soc_user:soc_pass@db:5432/soc_roster_db
 
 ---
 
-## 🐳 Docker Deployment
+# 🐳 Docker Deployment
 
-### Prerequisites
-
-* Docker Desktop
-* Git
-
-### 1. Clone the Repository
+## 1. Clone Repository
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/soc-roster-app.git
+git clone https://github.com/YOUR_USERNAME/soc-roster-app.git
 cd soc-roster-app
 ```
 
-### 2. Build & Start Services
+## 2. Build Containers
 
 ```bash
 docker-compose up --build -d
 ```
 
-### 3. Seed Initial Data
+## 3. Seed Initial Data
 
 ```bash
 docker-compose exec web python seed.py
 ```
 
-### 4. Access the Application
-
-Open your browser:
+## 4. Access Application
 
 ```text
 http://localhost:5000
@@ -156,41 +333,39 @@ http://localhost:5000
 
 ---
 
-## 💻 Local Development Setup
+# 💻 Local Development Setup
 
-### Create Virtual Environment
+## Create Virtual Environment
 
 ```bash
 python -m venv venv
 ```
 
-### Activate Environment
-
-**Windows**
+Windows
 
 ```bash
 venv\Scripts\activate
 ```
 
-**Linux/macOS**
+Linux/macOS
 
 ```bash
 source venv/bin/activate
 ```
 
-### Install Dependencies
+## Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### Initialize Database
+## Initialize Database
 
 ```bash
 python seed.py
 ```
 
-### Start Application
+## Run Application
 
 ```bash
 python run.py
@@ -198,125 +373,126 @@ python run.py
 
 ---
 
-## 📖 User Guide
+# 📖 Application Workflow
 
-### 🔐 Authentication
+### 1. Authentication
 
-Access the platform through the login page using seeded credentials.
+Access the platform using role-based authentication.
 
-### 👥 User Management
+### 2. User Administration
 
-Navigate to `/users` to:
+Manage SOC analysts and assign roles:
 
-* Create analysts
-* Assign roles and tiers
-* Manage SOC personnel
+* L1 Analyst
+* L2 Analyst
+* L3 Analyst
+* Manager
+* Administrator
 
-### 🏖️ Leave Management
+### 3. Leave Management
 
-Navigate to `/leave` to:
+Track analyst availability and manage leave requests.
 
-* Submit leave requests
-* Approve or reject requests
-* Automatically update roster availability
+### 4. Roster Generation
 
-### 📅 Roster Generation
+Generate monthly schedules while enforcing operational rules.
 
-Navigate to `/roster` to:
+### 5. Shift Tracking
 
-* Select a target month
-* Generate schedules automatically
-* Enforce staffing and fatigue rules
+Monitor active shifts and assigned personnel.
 
-### 📞 On-Call Management
+### 6. Escalation Management
 
-Navigate to `/oncall` to:
+Maintain external support teams and on-call contacts.
 
-* Maintain external escalation contacts
-* Configure support windows
-* Define incident response contacts
+### 7. Dashboard Monitoring
 
-### 📊 Dashboard Monitoring
-
-Navigate to `/dashboard` to:
-
-* View active personnel
-* Monitor current shift coverage
-* Track operational metrics
+Track current staffing levels and operational readiness.
 
 ---
 
-## 🔒 Scheduling Rules
+# 🔒 Scheduling Rules
 
-The roster engine enforces the following operational constraints:
+The roster engine enforces:
 
-* Continuous 24/7 coverage
-* No duplicate analyst assignments
-* Leave-aware scheduling
-* Senior analyst supervision requirements
-* Night-to-morning fatigue protection
-* Fair analyst workload distribution
-* Shift coverage validation
+✅ Continuous 24/7 coverage
+
+✅ Leave-aware scheduling
+
+✅ Analyst workload balancing
+
+✅ Senior analyst supervision requirements
+
+✅ No duplicate shift assignments
+
+✅ Fatigue protection controls
+
+✅ Night-to-Morning conflict prevention
+
+✅ Operational coverage validation
 
 ---
 
-## 🎯 Use Cases
+# 🎯 Use Cases
 
 * Security Operations Centers (SOC)
 * Managed Security Service Providers (MSSP)
+* Managed Detection & Response (MDR)
 * Network Operations Centers (NOC)
 * Incident Response Teams
-* Cybersecurity Monitoring Teams
-* Enterprise Security Departments
+* Enterprise Cybersecurity Teams
+* Global Security Monitoring Centers
 
 ---
 
-## 📸 Application Modules
+# 🛠️ Technology Stack
 
-| Module            | Purpose                         |
-| ----------------- | ------------------------------- |
-| Dashboard         | Real-time SOC visibility        |
-| Roster Management | Shift generation and scheduling |
-| User Management   | Analyst administration          |
-| Leave Management  | Leave request processing        |
-| Shift Tracker     | Active shift monitoring         |
-| On-Call Directory | Escalation contact management   |
+| Layer            | Technology                    |
+| ---------------- | ----------------------------- |
+| Backend          | Flask                         |
+| Frontend         | HTML, CSS, JavaScript, Jinja2 |
+| Database         | PostgreSQL                    |
+| ORM              | SQLAlchemy                    |
+| Authentication   | Flask-Login                   |
+| Containerization | Docker                        |
+| Deployment       | Docker Compose                |
 
 ---
 
-## 🤝 Contributing
+# 🚀 Future Enhancements
+
+* Multi-site SOC support
+* Shift swap requests
+* Calendar integrations
+* Email notifications
+* Microsoft Teams integration
+* SLA monitoring
+* REST API support
+* Advanced reporting
+* Workforce analytics
+
+---
+
+# 🤝 Contributing
 
 Contributions are welcome.
 
-1. Fork the repository
-2. Create a feature branch
-
 ```bash
 git checkout -b feature/new-feature
-```
-
-3. Commit your changes
-
-```bash
 git commit -m "Add new feature"
-```
-
-4. Push your branch
-
-```bash
 git push origin feature/new-feature
 ```
 
-5. Open a Pull Request
+Create a Pull Request for review.
 
 ---
 
-## 📄 License
+# 📄 License
 
 This project is licensed under the MIT License.
 
 ---
 
-## 👨‍💻 Author
+# 👨‍💻 Author
 
-Built for modern Security Operations Centers requiring reliable, automated, and compliant 24/7 workforce scheduling.
+Built for modern Security Operations Centers requiring reliable, scalable, and automated 24/7 workforce scheduling and operational management.
