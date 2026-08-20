@@ -1,5 +1,6 @@
 import calendar
 from datetime import datetime, date
+from urllib.parse import urlparse
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file
 from flask_login import login_user, logout_user, login_required, current_user
 from app.models import db, User, RosterEntry, LeaveRequest, ExternalOnCall, Role, Shift
@@ -24,8 +25,12 @@ def login():
         if user and user.check_password(password):
             login_user(user)
             flash(f'Welcome back, {user.name}!', 'success')
-            next_page = request.args.get('next')
-            return redirect(next_page or url_for('main.dashboard'))
+            next_page = request.args.get('next', '')
+            sanitized_next = next_page.replace('\\', '')
+            parsed_next = urlparse(sanitized_next)
+            if sanitized_next and not parsed_next.netloc and not parsed_next.scheme:
+                return redirect(sanitized_next)
+            return redirect(url_for('main.dashboard'))
         
         flash('Invalid email address or password.', 'danger')
     return render_template('login.html')
