@@ -6,8 +6,12 @@
     <h2>SOC Roster — {{ month_name }} {{ selected_year }}</h2>
 
     <div class="d-flex gap-2">
-      <!-- Month & Year Selector + Generate Button -->
+      <!-- Admin Controls: Swap & Generator -->
       {% if current_user.role.name in ['Admin', 'SOC_Manager'] %}
+      <button class="btn btn-warning text-nowrap fw-semibold" data-bs-toggle="modal" data-bs-target="#swapShiftModal">
+        🔄 Swap Shifts
+      </button>
+
       <form action="{{ url_for('main.generate_roster') }}" method="POST" class="d-flex gap-2">
         <select name="month" class="form-select">
           {% for m in range(1, 13) %}
@@ -24,13 +28,13 @@
         </select>
 
         <button type="submit" class="btn btn-primary text-nowrap">
-          <i class="bi bi-gear-wide-connected"></i> Generate Roster
+          ⚙️ Generate Roster
         </button>
       </form>
       {% endif %}
 
       <a href="{{ url_for('main.export_excel', year=selected_year, month=selected_month) }}" class="btn btn-outline-success">
-        <i class="bi bi-file-earmark-excel"></i> Export
+        📊 Export
       </a>
 
       <a href="{{ url_for('main.shift_tracker', year=selected_year) }}" class="btn btn-outline-secondary">
@@ -65,7 +69,10 @@
             {% set date_key = day.strftime('%Y-%m-%d') %}
             {% set entry = roster_dict.get((u.id, date_key)) %}
             
-            <td>
+            <td {% if current_user.role.name in ['Admin', 'SOC_Manager'] %}
+                  style="cursor: pointer;" 
+                  onclick="openOverrideModal('{{ u.id }}', '{{ u.name }}', '{{ date_key }}', '{{ entry.shift_type if entry else 'OFF' }}')"
+                {% endif %}>
               {% if entry %}
                 {% if entry.shift_type == 'OFF' %}
                   <span class="badge bg-secondary">OFF</span>
@@ -93,4 +100,98 @@
     </table>
   </div>
 </div>
+
+<!-- Modal 1: Shift Override Modal -->
+{% if current_user.role.name in ['Admin', 'SOC_Manager'] %}
+<div class="modal fade" id="overrideModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content bg-dark text-white border-secondary">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title">✏️ Manual Shift Override</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form action="{{ url_for('main.override_shift') }}" method="POST">
+        <div class="modal-body">
+          <input type="hidden" name="user_id" id="override_user_id">
+          <div class="mb-3">
+            <label class="form-label">Analyst</label>
+            <input type="text" id="override_user_name" class="form-control bg-secondary text-white" readonly>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Date</label>
+            <input type="date" name="date" id="override_date" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Select New Shift</label>
+            <select name="shift_type" id="override_shift_type" class="form-select" required>
+              <option value="Morning">Morning (M)</option>
+              <option value="Evening">Evening (E)</option>
+              <option value="Night">Night (N)</option>
+              <option value="General">General (GEN)</option>
+              <option value="OFF">OFF</option>
+              <option value="Leave">Leave</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Shift</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 2: Shift Swap Modal -->
+<div class="modal fade" id="swapShiftModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content bg-dark text-white border-secondary">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title">🔄 Real-time Shift Swap</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form action="{{ url_for('main.swap_shifts') }}" method="POST">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Date</label>
+            <input type="date" name="date" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">First Analyst</label>
+            <select name="user1_id" class="form-select" required>
+              {% for u in users %}
+                <option value="{{ u.id }}">{{ u.name }} ({{ u.tier or u.role.name }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Second Analyst (Swap With)</label>
+            <select name="user2_id" class="form-select" required>
+              {% for u in users %}
+                <option value="{{ u.id }}">{{ u.name }} ({{ u.tier or u.role.name }})</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-warning">Execute Swap</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openOverrideModal(userId, userName, dateStr, currentShift) {
+    document.getElementById('override_user_id').value = userId;
+    document.getElementById('override_user_name').value = userName;
+    document.getElementById('override_date').value = dateStr;
+    document.getElementById('override_shift_type').value = currentShift;
+    
+    var modal = new bootstrap.Modal(document.getElementById('overrideModal'));
+    modal.show();
+  }
+</script>
+{% endif %}
 {% endblock %}

@@ -1,20 +1,30 @@
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from app import db
+from app import db, login_manager
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 
 class Role(db.Model):
     __tablename__ = 'roles'
+    __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, nullable=False)
     
     users = db.relationship('User', backref='role', lazy=True)
 
+    def __repr__(self):
+        return f'<Role {self.name}>'
+
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
+    __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -26,11 +36,13 @@ class User(UserMixin, db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'), nullable=False)
 
+    # Leave Tracking Attributes
     annual_leave_allocated = db.Column(db.Integer, default=20, nullable=False)
     annual_leave_used = db.Column(db.Integer, default=0, nullable=False)
     sick_leave_monthly_used = db.Column(db.Integer, default=0, nullable=False)
     sick_leave_total_used = db.Column(db.Integer, default=0, nullable=False)
 
+    # Relationships
     roster_entries = db.relationship('RosterEntry', backref='user', lazy=True, cascade="all, delete-orphan")
     leave_requests = db.relationship('LeaveRequest', backref='user', lazy=True, cascade="all, delete-orphan")
 
@@ -42,23 +54,52 @@ class User(UserMixin, db.Model):
             return False
         return check_password_hash(self.password_hash, password)
 
+    @property
+    def remaining_annual_leave(self):
+        return max(0, self.annual_leave_allocated - self.annual_leave_used)
+
+    def __repr__(self):
+        return f'<User {self.name} ({self.tier})>'
+
+
+class Shift(db.Model):
+    __tablename__ = 'shifts'
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)  # Morning, Evening, Night, General
+    start_time = db.Column(db.Time, nullable=True)
+    end_time = db.Column(db.Time, nullable=True)
+
+    roster_entries = db.relationship('RosterEntry', backref='shift', lazy=True)
+
+    def __repr__(self):
+        return f'<Shift {self.name}>'
+
 
 class RosterEntry(db.Model):
     __tablename__ = 'roster_entries'
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'roster_date', name='_user_date_uc'),
+        {'extend_existing': True}
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     roster_date = db.Column(db.Date, nullable=False)
-    shift_type = db.Column(db.String(20), nullable=False)  # Morning, Evening, Night, General, OFF, Leave
+    shift_type = db.Column(db.String(50), nullable=False)  # Morning, Evening, Night, General, OFF, Leave
+    shift_id = db.Column(db.Integer, db.ForeignKey('shifts.id'), nullable=True)
     is_on_call = db.Column(db.Boolean, default=False, nullable=False)
     is_override = db.Column(db.Boolean, default=False, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
-    __table_args__ = (db.UniqueConstraint('user_id', 'roster_date', name='_user_date_uc'),)
+    def __repr__(self):
+        return f'<RosterEntry {self.roster_date} - User:{self.user_id} - Shift:{self.shift_type}>'
 
 
 class LeaveRequest(db.Model):
     __tablename__ = 'leave_requests'
+    __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -66,11 +107,19 @@ class LeaveRequest(db.Model):
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
     status = db.Column(db.String(20), default='Approved', nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    @property
+    def duration_days(self):
+        return (self.end_date - self.start_date).days + 1
+
+    def __repr__(self):
+        return f'<LeaveRequest User:{self.user_id} ({self.leave_type}) {self.start_date} to {self.end_date}>'
 
 
 class ExternalOnCall(db.Model):
     __tablename__ = 'external_oncall'
+    __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
     team_name = db.Column(db.String(100), nullable=False)
@@ -80,4 +129,7 @@ class ExternalOnCall(db.Model):
     phone = db.Column(db.String(20), nullable=False)
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    def __repr__(self):
+        return f'<ExternalOnCall {self.team_name} - {self.name}>'

@@ -34,6 +34,13 @@
                 <li class="nav-item">
                     <a class="nav-link {% if request.endpoint == 'main.view_oncall' %}active{% endif %}" href="{{ url_for('main.view_oncall') }}">On-Call Teams</a>
                 </li>
+                
+                <!-- User Management Menu (Visible to Admins and Managers) -->
+                {% if current_user.role and current_user.role.name in ['Admin', 'SOC_Manager'] %}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint in ['main.list_users', 'main.add_user', 'main.edit_user'] %}active{% endif %}" href="{{ url_for('main.list_users') }}">User Management</a>
+                </li>
+                {% endif %}
             </ul>
             
             <!-- User Status & Logout -->

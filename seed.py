@@ -1,10 +1,10 @@
 import sys
 import os
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 import calendar
 
 from app import create_app, db
-from app.models import Role, User, ExternalOnCall, RosterEntry, LeaveRequest
+from app.models import Role, User, Shift, ExternalOnCall, RosterEntry, LeaveRequest
 from app.scheduler import generate_monthly_roster
 
 app = create_app()
@@ -28,9 +28,28 @@ def seed_database():
                 print(f"Added role: {role_name}")
             roles_map[role_name] = role.id
 
+        # 2. Seed Shift Definitions
+        shifts_data = [
+            {"name": "General", "start_time": time(9, 0), "end_time": time(17, 0)},
+            {"name": "Morning", "start_time": time(7, 0), "end_time": time(15, 0)},
+            {"name": "Evening", "start_time": time(15, 0), "end_time": time(23, 0)},
+            {"name": "Night", "start_time": time(23, 0), "end_time": time(7, 0)},
+            {"name": "OFF", "start_time": None, "end_time": None},
+            {"name": "Leave", "start_time": None, "end_time": None},
+        ]
+        shifts_map = {}
+        for s in shifts_data:
+            shift = Shift.query.filter_by(name=s["name"]).first()
+            if not shift:
+                shift = Shift(name=s["name"], start_time=s["start_time"], end_time=s["end_time"])
+                db.session.add(shift)
+                db.session.flush()
+                print(f"Added shift: {s['name']}")
+            shifts_map[s["name"]] = shift.id
+
         db.session.commit()
 
-        # 2. Seed System Admin
+        # 3. Seed System Admin
         admin_email = "admin@company.com"
         admin = User.query.filter_by(email=admin_email).first()
         if not admin:
@@ -51,7 +70,7 @@ def seed_database():
             db.session.add(admin)
             print("Added System Admin: admin@company.com")
 
-        # 3. Seed SOC Manager
+        # 4. Seed SOC Manager
         manager_email = "soc.manager@company.com"
         manager = User.query.filter_by(email=manager_email).first()
         if not manager:
@@ -72,7 +91,7 @@ def seed_database():
             db.session.add(manager)
             print("Added SOC Manager: Sarah Jenkins")
 
-        # 4. Seed L3 Analysts (General Shift Mon-Fri)
+        # 5. Seed L3 Analysts
         l3_analysts = [
             ("Alex Mercer", "alex.mercer@company.com", "+1-555-0101", date(2022, 1, 10)),
             ("Elena Rostova", "elena.rostova@company.com", "+1-555-0102", date(2022, 6, 1)),
@@ -96,7 +115,7 @@ def seed_database():
                 db.session.add(user)
                 print(f"Added L3 Analyst: {name}")
 
-        # 5. Seed L2 Analysts (Rotating Shifts)
+        # 6. Seed L2 Analysts
         l2_analysts = [
             ("David Vance", "david.vance@company.com", "+1-555-0201", date(2023, 2, 15)),
             ("Priya Sharma", "priya.sharma@company.com", "+1-555-0202", date(2023, 4, 20)),
@@ -120,7 +139,7 @@ def seed_database():
                 db.session.add(user)
                 print(f"Added L2 Analyst: {name}")
 
-        # 6. Seed L1 Analysts (Rotating Shifts)
+        # 7. Seed L1 Analysts
         l1_analysts = [
             ("James Wilson", "james.wilson@company.com", "+1-555-0301", date(2024, 1, 15)),
             ("Maria Garcia", "maria.garcia@company.com", "+1-555-0302", date(2024, 2, 1)),
@@ -147,7 +166,7 @@ def seed_database():
                 db.session.add(user)
                 print(f"Added L1 Analyst: {name}")
 
-        # 7. Seed Sample Leave Request
+        # 8. Seed Sample Leave Request
         today = date.today()
         sample_user = User.query.filter_by(email="james.wilson@company.com").first()
         if sample_user and not LeaveRequest.query.filter_by(user_id=sample_user.id).first():
@@ -163,11 +182,18 @@ def seed_database():
 
         db.session.commit()
 
-        # 8. Trigger Roster Generation for Current Month
+        # 9. Trigger Roster Generation for Current Month
         print(f"Generating roster schedule for {today.strftime('%B %Y')}...")
         generate_monthly_roster(today.year, today.month)
 
-        # 9. Seed Internal Escalation On-Call Flags (L2/L3 On-Call Rotation)
+        # Backfill shift_id on generated roster entries if missing
+        roster_entries = RosterEntry.query.filter(RosterEntry.shift_id == None).all()
+        for entry in roster_entries:
+            if entry.shift_type in shifts_map:
+                entry.shift_id = shifts_map[entry.shift_type]
+        db.session.commit()
+
+        # 10. Seed Internal Escalation On-Call Flags
         l3_user = User.query.filter_by(tier="L3").first()
         if l3_user:
             oncall_entry = RosterEntry.query.filter_by(
@@ -178,7 +204,7 @@ def seed_database():
                 oncall_entry.is_on_call = True
                 print(f"Assigned internal on-call duty to L3: {l3_user.name}")
 
-        # 10. Seed External On-Call Contacts
+        # 11. Seed External On-Call Contacts
         next_month = today + timedelta(days=30)
         external_teams = [
             ("Infra Team", "Robert Ford", "Principal Cloud Engineer", "robert.ford@company.com", "+1-555-0801"),

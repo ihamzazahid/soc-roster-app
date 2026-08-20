@@ -1,142 +1,143 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container-fluid mt-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Team Management</h2>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
-      <i class="bi bi-person-plus"></i> Add Team Member
-    </button>
-  </div>
-
-  <div class="card shadow-sm">
-    <div class="card-body">
-      <div class="table-responsive">
-        <table class="table table-hover align-middle">
-          <thead class="table-light">
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Tier</th>
-              <th>System Role</th>
-              <th>Joining Date</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for u in users %}
-            <tr>
-              <td class="fw-bold">{{ u.name }}</td>
-              <td>{{ u.email }}</td>
-              <td>{{ u.phone or '-' }}</td>
-              <td><span class="badge bg-info text-dark">{{ u.tier }}</span></td>
-              <td>{{ u.role.name }}</td>
-              <td>{{ u.joining_date.strftime('%Y-%m-%d') }}</td>
-              <td>
-                {% if u.is_active %}
-                  <span class="badge bg-success">Active</span>
-                {% else %}
-                  <span class="badge bg-secondary">Inactive</span>
-                {% endif %}
-              </td>
-              <td>
-                <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editUserModal{{ u.id }}">
-                  Edit
-                </button>
-              </td>
-            </tr>
-
-            <!-- Edit User Modal -->
-            <div class="modal fade" id="editUserModal{{ u.id }}" tabindex="-1">
-              <div class="modal-dialog">
-                <form action="{{ url_for('main.update_user', user_id=u.id) }}" method="POST" class="modal-content">
-                  <div class="modal-header">
-                    <h5 class="modal-title">Edit {{ u.name }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                  </div>
-                  <div class="modal-body">
-                    <div class="mb-3">
-                      <label class="form-label">Name</label>
-                      <input type="text" name="name" class="form-control" value="{{ u.name }}" required>
-                    </div>
-                    <div class="mb-3">
-                      <label class="form-label">Phone</label>
-                      <input type="text" name="phone" class="form-control" value="{{ u.phone or '' }}">
-                    </div>
-                    <div class="mb-3">
-                      <label class="form-label">Tier</label>
-                      <select name="tier" class="form-select">
-                        {% for t in ['L1', 'L2', 'L3', 'Manager'] %}
-                          <option value="{{ t }}" {% if u.tier == t %}selected{% endif %}>{{ t }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-                    <div class="form-check mb-3">
-                      <input class="form-check-input" type="checkbox" name="is_active" id="active{{ u.id }}" {% if u.is_active %}checked{% endif %}>
-                      <label class="form-check-label" for="active{{ u.id }}">Active</label>
-                    </div>
-                  </div>
-                  <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                  </div>
-                </form>
-              </div>
-            </div>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Analyst & User Directory</h2>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">+ Add New User</button>
     </div>
-  </div>
+
+    <!-- User List Table -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Tier</th>
+                        <th>System Role</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td><strong>{{ user.name }}</strong></td>
+                        <td>{{ user.email }}</td>
+                        <td>
+                            <span class="badge {{ 'bg-dark' if user.tier in ['L3', 'Manager'] else 'bg-info text-dark' }}">
+                                {{ user.tier }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge {{ 'bg-danger' if user.role == 'Admin' else 'bg-secondary' }}">
+                                {{ user.role }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge {{ 'bg-success' if user.is_active else 'bg-warning text-dark' }}">
+                                {{ 'Active' if user.is_active else 'Inactive' }}
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ user.id }}">Edit</button>
+                            <form action="{{ url_for('main.delete_user', user_id=user.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this analyst?');">
+                                <button class="btn btn-sm btn-outline-danger">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+
+                    <!-- EDIT MODAL -->
+                    <div class="modal fade" id="editModal{{ user.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <form action="{{ url_for('main.edit_user', user_id=user.id) }}" method="POST" class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Edit Analyst Profile</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Full Name</label>
+                                        <input type="text" name="name" class="form-control" value="{{ user.name }}" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Email</label>
+                                        <input type="email" name="email" class="form-control" value="{{ user.email }}" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Tier / Operational Level</label>
+                                        <select name="tier" class="form-select">
+                                            <option value="L1" {{ 'selected' if user.tier == 'L1' }}>L1 Analyst</option>
+                                            <option value="L2" {{ 'selected' if user.tier == 'L2' }}>L2 Analyst</option>
+                                            <option value="L3" {{ 'selected' if user.tier == 'L3' }}>L3 Senior (General Shift)</option>
+                                            <option value="Manager" {{ 'selected' if user.tier == 'Manager' }}>SOC Manager (General Shift)</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">System Access Role</label>
+                                        <select name="role" class="form-select">
+                                            <option value="User" {{ 'selected' if user.role == 'User' }}>User</option>
+                                            <option value="Admin" {{ 'selected' if user.role == 'Admin' }}>Admin</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-check">
+                                        <input type="checkbox" name="is_active" class="form-check-input" id="act{{ user.id }}" {{ 'checked' if user.is_active }}>
+                                        <label class="form-check-label" for="act{{ user.id }}">Active for Roster Scheduling</label>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
-<!-- Add User Modal -->
+<!-- ADD USER MODAL -->
 <div class="modal fade" id="addUserModal" tabindex="-1">
-  <div class="modal-dialog">
-    <form action="{{ url_for('main.add_user') }}" method="POST" class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Add New Team Member</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-3">
-          <label class="form-label">Name</label>
-          <input type="text" name="name" class="form-control" required>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Email</label>
-          <input type="email" name="email" class="form-control" required>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Phone</label>
-          <input type="text" name="phone" class="form-control">
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Tier</label>
-          <select name="tier" class="form-select">
-            <option value="L1">L1</option>
-            <option value="L2">L2</option>
-            <option value="L3">L3</option>
-            <option value="Manager">Manager</option>
-          </select>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">System Role</label>
-          <select name="role_id" class="form-select" required>
-            {% for r in roles %}
-              <option value="{{ r.id }}">{{ r.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="submit" class="btn btn-primary">Create Member</button>
-      </div>
-    </form>
-  </div>
+    <div class="modal-dialog">
+        <form action="{{ url_for('main.add_user') }}" method="POST" class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Analyst / User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" name="name" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Tier</label>
+                    <select name="tier" class="form-select">
+                        <option value="L1">L1 Analyst</option>
+                        <option value="L2">L2 Analyst</option>
+                        <option value="L3">L3 Senior (General Shift)</option>
+                        <option value="Manager">SOC Manager (General Shift)</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">System Access Role</label>
+                    <select name="role" class="form-select">
+                        <option value="User">User</option>
+                        <option value="Admin">Admin</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">Create User</button>
+            </div>
+        </form>
+    </div>
 </div>
 {% endblock %}

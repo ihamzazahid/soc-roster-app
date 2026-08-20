@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container text-center mt-5">
+    <h1 class="display-1 text-danger">403</h1>
+    <h2>Access Denied</h2>
+    <p class="lead">Only Administrators can manage users, change analyst names, or update roles.</p>
+    <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary mt-3">Return to Dashboard</a>
+</div>
+{% endblock %}

@@ -1,24 +1,11 @@
 import calendar
 from datetime import datetime, date
-from functools import wraps
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file
 from flask_login import login_user, logout_user, login_required, current_user
-from app.models import db, User, RosterEntry, LeaveRequest, ExternalOnCall, Role
+from app.models import db, User, RosterEntry, LeaveRequest, ExternalOnCall, Role, Shift
+from app.utils import role_required, admin_required, export_roster_to_excel
 
-# Initialize Blueprint
 main = Blueprint('main', __name__)
-
-# Role-Based Access Control (RBAC) Decorator
-def role_required(*roles):
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            if not current_user.is_authenticated or current_user.role.name not in roles:
-                flash('Unauthorized access privileges.', 'danger')
-                return redirect(url_for('main.dashboard'))
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
 
 # --------------------------------------------------------------------------
 # AUTHENTICATION ROUTES
@@ -51,6 +38,79 @@ def logout():
     return redirect(url_for('main.login'))
 
 # --------------------------------------------------------------------------
+# USER / ANALYST MANAGEMENT (ADMIN-ONLY CRUD)
+# --------------------------------------------------------------------------
+
+@main.route('/users')
+@login_required
+@role_required('Admin', 'SOC_Manager')
+def list_users():
+    users = User.query.order_by(User.tier, User.name).all()
+    roles = Role.query.all()
+    return render_template('users.html', users=users, roles=roles)
+
+@main.route('/users/add', methods=['POST'])
+@login_required
+@role_required('Admin', 'SOC_Manager')
+def add_user():
+    name = request.form.get('name')
+    email = request.form.get('email')
+    tier = request.form.get('tier', 'L1')
+    role_name = request.form.get('role', 'User')
+
+    if User.query.filter_by(email=email).first():
+        flash('Email already registered!', 'danger')
+        return redirect(url_for('main.list_users'))
+
+    role_obj = Role.query.filter_by(name=role_name).first()
+    if not role_obj:
+        # Fallback to standard User role if specified role doesn't exist
+        role_obj = Role.query.filter_by(name='User').first()
+
+    new_user = User(
+        name=name,
+        email=email,
+        tier=tier,
+        role_id=role_obj.id if role_obj else 1,
+        is_active=True
+    )
+
+    db.session.add(new_user)
+    db.session.commit()
+    flash(f'Analyst {name} added successfully.', 'success')
+    return redirect(url_for('main.list_users'))
+
+@main.route('/users/edit/<int:user_id>', methods=['POST'])
+@login_required
+@role_required('Admin', 'SOC_Manager')
+def edit_user(user_id):
+    user = User.query.get_or_404(user_id)
+    user.name = request.form.get('name', user.name)
+    user.email = request.form.get('email', user.email)
+    user.tier = request.form.get('tier', user.tier)
+    user.is_active = 'is_active' in request.form
+
+    role_name = request.form.get('role')
+    if role_name:
+        role_obj = Role.query.filter_by(name=role_name).first()
+        if role_obj:
+            user.role_id = role_obj.id
+
+    db.session.commit()
+    flash(f'Updated profile details for {user.name}.', 'success')
+    return redirect(url_for('main.list_users'))
+
+@main.route('/users/delete/<int:user_id>', methods=['POST'])
+@login_required
+@role_required('Admin', 'SOC_Manager')
+def delete_user(user_id):
+    user = User.query.get_or_404(user_id)
+    db.session.delete(user)
+    db.session.commit()
+    flash('Analyst profile removed.', 'info')
+    return redirect(url_for('main.list_users'))
+
+# --------------------------------------------------------------------------
 # DASHBOARD
 # --------------------------------------------------------------------------
 
@@ -60,7 +120,6 @@ def logout():
 def dashboard():
     today = date.today()
     
-    # Active shifts for today grouped by shift type
     today_entries = RosterEntry.query.filter_by(roster_date=today).all()
     active_shifts = {
         'Morning': [], 'Evening': [], 'Night': [], 
@@ -70,13 +129,11 @@ def dashboard():
         if entry.shift_type in active_shifts:
             active_shifts[entry.shift_type].append(entry.user)
 
-    # Active External On-Call resources
     oncall_contacts = ExternalOnCall.query.filter(
         ExternalOnCall.start_date <= today,
         ExternalOnCall.end_date >= today
     ).all()
 
-    # Manager Escalation Contact
     manager_role = Role.query.filter_by(name='SOC_Manager').first()
     soc_manager = User.query.filter_by(role_id=manager_role.id).first() if manager_role else None
 
@@ -95,17 +152,15 @@ def dashboard():
 @main.route('/roster')
 @login_required
 def view_roster():
-    from app.scheduler import generate_monthly_roster  # Lazy import
+    from app.services.roster_generator import generate_monthly_roster
     
     now = datetime.now()
     year = int(request.args.get('year', now.year))
     month = int(request.args.get('month', now.month))
 
-    # Calculate full date list for the selected month
     _, num_days = calendar.monthrange(year, month)
     days_in_month = [date(year, month, d) for d in range(1, num_days + 1)]
 
-    # Fetch users ordered by Tier and Name
     users = User.query.filter_by(is_active=True).order_by(User.tier, User.name).all()
     
     roster_data = RosterEntry.query.filter(
@@ -113,7 +168,6 @@ def view_roster():
         db.extract('month', RosterEntry.roster_date) == month
     ).all()
 
-    # Auto-generate if matrix for requested month is unpopulated
     if not roster_data:
         generate_monthly_roster(year, month)
         roster_data = RosterEntry.query.filter(
@@ -121,7 +175,6 @@ def view_roster():
             db.extract('month', RosterEntry.roster_date) == month
         ).all()
 
-    # Build dictionary lookup: (user_id, 'YYYY-MM-DD') -> RosterEntry
     roster_dict = {
         (r.user_id, r.roster_date.strftime('%Y-%m-%d')): r 
         for r in roster_data
@@ -141,7 +194,7 @@ def view_roster():
 @login_required
 @role_required('Admin', 'SOC_Manager')
 def generate_roster():
-    from app.scheduler import generate_monthly_roster  # Lazy import
+    from app.services.roster_generator import generate_monthly_roster
     
     year = int(request.form.get('year'))
     month = int(request.form.get('month'))
@@ -152,7 +205,6 @@ def generate_roster():
 @main.route('/shift-tracker')
 @login_required
 def shift_tracker():
-    """Multi-month Shift Tracker overview across all 12 months."""
     year = int(request.args.get('year', datetime.now().year))
     
     months_summary = []
@@ -180,23 +232,60 @@ def override_shift():
     shift_date = datetime.strptime(request.form.get('date'), '%Y-%m-%d').date()
     new_shift = request.form.get('shift_type')
 
+    # Assign shift_id if model matching Shift entry exists
+    shift_obj = Shift.query.filter_by(name=new_shift).first()
+
     entry = RosterEntry.query.filter_by(user_id=user_id, roster_date=shift_date).first()
     if entry:
         entry.shift_type = new_shift
+        entry.shift_id = shift_obj.id if shift_obj else None
         entry.is_override = True
     else:
-        entry = RosterEntry(user_id=user_id, roster_date=shift_date, shift_type=new_shift, is_override=True)
+        entry = RosterEntry(
+            user_id=user_id, 
+            roster_date=shift_date, 
+            shift_type=new_shift, 
+            shift_id=shift_obj.id if shift_obj else None,
+            is_override=True
+        )
         db.session.add(entry)
 
     db.session.commit()
-    flash('Shift overridden successfully.', 'info')
+    flash('Shift updated successfully.', 'info')
+    return redirect(url_for('main.view_roster', year=shift_date.year, month=shift_date.month))
+
+@main.route('/roster/swap', methods=['POST'])
+@login_required
+@role_required('Admin', 'SOC_Manager')
+def swap_shifts():
+    user1_id = int(request.form.get('user1_id'))
+    user2_id = int(request.form.get('user2_id'))
+    shift_date = datetime.strptime(request.form.get('date'), '%Y-%m-%d').date()
+
+    if user1_id == user2_id:
+        flash('Cannot swap shift with the same analyst.', 'warning')
+        return redirect(url_for('main.view_roster', year=shift_date.year, month=shift_date.month))
+
+    entry1 = RosterEntry.query.filter_by(user_id=user1_id, roster_date=shift_date).first()
+    entry2 = RosterEntry.query.filter_by(user_id=user2_id, roster_date=shift_date).first()
+
+    if not entry1 or not entry2:
+        flash('Both analysts must have active roster entries on the selected date.', 'danger')
+        return redirect(url_for('main.view_roster', year=shift_date.year, month=shift_date.month))
+
+    # Swap shift assignments real-time
+    entry1.shift_type, entry2.shift_type = entry2.shift_type, entry1.shift_type
+    entry1.shift_id, entry2.shift_id = entry2.shift_id, entry1.shift_id
+    entry1.is_override = True
+    entry2.is_override = True
+
+    db.session.commit()
+    flash(f'Shifts successfully swapped between analysts for {shift_date.strftime("%b %d, %Y")}.', 'success')
     return redirect(url_for('main.view_roster', year=shift_date.year, month=shift_date.month))
 
 @main.route('/roster/export')
 @login_required
 def export_excel():
-    from app.utils import export_roster_to_excel  # Lazy import
-    
     now = datetime.now()
     year = int(request.args.get('year', now.year))
     month = int(request.args.get('month', now.month))
@@ -235,7 +324,7 @@ def view_leaves():
 @main.route('/leaves/submit', methods=['POST'])
 @login_required
 def submit_leave():
-    from app.scheduler import generate_monthly_roster  # Lazy import
+    from app.services.roster_generator import generate_monthly_roster
     
     user_id = int(request.form.get('user_id'))
     leave_type = request.form.get('leave_type')
@@ -260,12 +349,11 @@ def submit_leave():
     if leave_type == 'Annual':
         user.annual_leave_used += num_days
     elif leave_type == 'Sick':
-        user.sick_leave_monthly_used += num_days
         user.sick_leave_total_used += num_days
 
     db.session.commit()
 
-    # Re-trigger roster engine to reflect approved leave across months
+    # Recalculate roster across leave date range
     curr = start_date
     while curr <= end_date:
         generate_monthly_roster(curr.year, curr.month)
@@ -285,7 +373,8 @@ def submit_leave():
 @login_required
 def view_oncall():
     if request.method == 'POST':
-        if current_user.role.name not in ['Admin', 'SOC_Manager']:
+        user_role = current_user.role.name if current_user.role else 'User'
+        if user_role not in ['Admin', 'SOC_Manager']:
             flash('Unauthorized to add on-call contacts.', 'danger')
             return redirect(url_for('main.view_oncall'))
 

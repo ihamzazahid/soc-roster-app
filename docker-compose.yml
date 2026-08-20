@@ -1,3 +1,4 @@
+version: '3.8'
 
 services:
   web:
@@ -11,5 +12,7 @@ services:
     volumes:
       # Syncs host project files into the container live
       - .:/app
+      # Explicitly binds instance directory to host filesystem
+      - ./instance:/app/instance
     # Overrides Dockerfile CMD to enable live auto-reload
     command: gunicorn --bind 0.0.0.0:5000 --workers 2 --reload run:app
